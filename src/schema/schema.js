@@ -24,10 +24,20 @@ const RootQuery = new GraphQLObjectType({
       },
     },
 
-    articles: {
-      type: new GraphQLList(ArticleType),
+    articlesCount: {
+      type: GraphQLInt,
+      args: {
+        startDate: { type: GraphQLString },
+        endDate: { type: GraphQLString },
+      },
       resolve(parent, args) {
-        return Article.findAll();
+        return Article.count({
+          where: {
+            date: {
+              [Op.between]: [args.startDate || 0, args.endDate || Infinity],
+            },
+          },
+        });
       },
     },
 
@@ -36,20 +46,13 @@ const RootQuery = new GraphQLObjectType({
       args: {
         limit: { type: new GraphQLNonNull(GraphQLString) },
         offset: { type: new GraphQLNonNull(GraphQLString) },
-      },
-      resolve(parent, args) {
-        return Article.findAll({ limit: args.limit, offset: args.offset });
-      },
-    },
-
-    articlesFilterdByDate: {
-      type: new GraphQLList(ArticleType),
-      args: {
         startDate: { type: GraphQLString },
         endDate: { type: GraphQLString },
       },
       resolve(parent, args) {
         return Article.findAll({
+          limit: args.limit,
+          offset: args.offset,
           where: {
             date: {
               [Op.between]: [args.startDate || 0, args.endDate || Infinity],
@@ -75,6 +78,10 @@ const mutation = new GraphQLObjectType({
         phone: { type: new GraphQLNonNull(GraphQLString) },
         content: { type: new GraphQLNonNull(GraphQLString) },
         categoryId: { type: new GraphQLNonNull(GraphQLInt) },
+        startDate: { type: GraphQLString },
+        endDate: { type: GraphQLString },
+        limit: { type: new GraphQLNonNull(GraphQLString) },
+        offset: { type: new GraphQLNonNull(GraphQLString) },
       },
       resolve(parent, args) {
         return Article.create({
@@ -87,6 +94,78 @@ const mutation = new GraphQLObjectType({
           content: args.content,
           categoryId: args.categoryId,
         });
+      },
+    },
+
+    removeArticle: {
+      type: new GraphQLList(ArticleType),
+      args: {
+        id: { type: new GraphQLNonNull(GraphQLInt) },
+        startDate: { type: GraphQLString },
+        endDate: { type: GraphQLString },
+        limit: { type: new GraphQLNonNull(GraphQLString) },
+        offset: { type: new GraphQLNonNull(GraphQLString) },
+      },
+
+      resolve(parent, args) {
+        return (
+          Article.destroy({ where: { id: args.id } }) &&
+          Article.findAll({
+            where: {
+              date: {
+                [Op.between]: [args.startDate || 0, args.endDate || Infinity],
+              },
+            },
+            limit: args.limit,
+            offset: args.offset,
+          })
+        );
+      },
+    },
+
+    editArticle: {
+      type: new GraphQLList(ArticleType),
+      args: {
+        id: { type: new GraphQLNonNull(GraphQLInt) },
+        name: { type: GraphQLString },
+        surname: { type: GraphQLString },
+        email: { type: GraphQLString },
+        title: { type: GraphQLString },
+        date: { type: GraphQLString },
+        phone: { type: GraphQLString },
+        content: { type: GraphQLString },
+        categoryId: { type: GraphQLInt },
+        startDate: { type: GraphQLString },
+        endDate: { type: GraphQLString },
+        limit: { type: new GraphQLNonNull(GraphQLString) },
+        offset: { type: new GraphQLNonNull(GraphQLString) },
+      },
+
+      resolve(parent, args) {
+        return (
+          Article.update(
+            {
+              name: args.name,
+              surname: args.surname,
+              date: args.date,
+              email: args.email,
+              title: args.title,
+              phone: args.phone,
+              content: args.content,
+              categoryId: args.categoryId,
+            },
+            { where: { id: args.id } }
+          ) &&
+          Article.findAll({
+            where: {
+              date: {
+                [Op.between]: [args.startDate || 0, args.endDate || Infinity],
+              },
+            },
+            limit: args.limit,
+            offset: args.offset,
+          })
+        );
       },
     },
   },
